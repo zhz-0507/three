@@ -29,10 +29,25 @@ scene.add(camera);
 
 // 添加物体
 // 创建几何体
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+// const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+const geometry = new THREE.BufferGeometry();
+const vertices = new Float32Array( [
+	-1.0, -1.0,  1.0,
+	 1.0, -1.0,  1.0,
+	 1.0,  1.0,  1.0,
+
+	 1.0,  1.0,  1.0,
+	-1.0,  1.0,  1.0,
+	-1.0, -1.0,  1.0
+] );
+
+// itemSize = 3 因为每个顶点都是一个三元组。
+geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
 const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
 // 根据几何体和材质创建物体
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+const cube = new THREE.Mesh(geometry, cubeMaterial);
+
+
 
 // 修改物体的位置
 // cube.position.set(5, 0, 0);
