@@ -10,11 +10,12 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 // 目标：掌握轻量级图形界面
 
 // 1、创建场景
 const scene = new THREE.Scene();
-
+const gui = new dat.GUI();
 // 2、创建相机
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -27,35 +28,52 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 0, 10);
 scene.add(camera);
 
-// 导入纹理
-const textureLoader = new THREE.TextureLoader();
-const url = require('./assets/textures/door/color.jpg')
-const doorColorTexture = textureLoader.load(url);
-// 设置纹理偏移
-// doorColorTexture.offset.set(0.5, 0.5)
-// 纹理旋转
-// doorColorTexture.rotation = Math.PI / 4
-// 纹理重复
-// 水平2次 垂直3次
-doorColorTexture.repeat.set(2, 3)
-// 设置重复的模式
-doorColorTexture.wrapS = THREE.MirroredRepeatWrapping
-doorColorTexture.wrapT = THREE.RepeatWrapping
-// 添加物体
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-// 材质
-const basicMaterial = new THREE.MeshBasicMaterial({
-  color: "#ffff00",
-  map: doorColorTexture,
-});
-const cube = new THREE.Mesh(cubeGeometry, basicMaterial);
-scene.add(cube);
+const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20);
+const material = new THREE.MeshStandardMaterial();
+const sphere = new THREE.Mesh(sphereGeometry, material);
+// 投射阴影
+sphere.castShadow = true;
+scene.add(sphere)
+
+// 创建平面
+const planeGeometry = new THREE.PlaneBufferGeometry(50, 50);
+const plane = new THREE.Mesh(planeGeometry, material);
+plane.position.set(0, -1, 0);
+plane.rotation.x = -Math.PI / 2;
+plane.receiveShadow = true;
+scene.add(plane);
+// 灯光
+// 环境光
+const light = new THREE.AmbientLight(0xffffff, .5); // soft white light
+scene.add(light);
+
+const smallBall = new THREE.Mesh(
+  new THREE.SphereBufferGeometry(0.1, 20, 20),
+  new THREE.MeshBasicMaterial({ color: 0xff0000 })
+);
+
+smallBall.position.set(20, 2, 2)
 
 
+//直线光源
+const pointLight = new THREE.PointLight(0xff0000, 1);
+pointLight.position.set(10, 10, 10);
+pointLight.castShadow = true;
+// 设置模糊度
+pointLight.shadow.radius = 20
+// 设置阴影贴图的分辨率
+pointLight.shadow.mapSize.set(512, 512)
+pointLight.decay = 0
+
+// 设置透视相机的属性
+smallBall.add(pointLight);
+scene.add(smallBall)
 // 初始化渲染器
 const renderer = new THREE.WebGLRenderer();
 // 设置渲染的尺寸大小
 renderer.setSize(window.innerWidth, window.innerHeight);
+// 开启场景中的阴影贴图
+renderer.shadowMap.enabled = true
 // console.log(renderer);
 // 将webgl渲染的canvas内容添加到body
 document.body.appendChild(renderer.domElement);
@@ -95,6 +113,7 @@ window.addEventListener("resize", () => {
   //   设置渲染器的像素比
   renderer.setPixelRatio(window.devicePixelRatio);
 });
+
 
 
 
