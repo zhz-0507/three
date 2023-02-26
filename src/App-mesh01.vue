@@ -21,66 +21,53 @@ const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
-  40
+  1000
 );
 
 // 设置相机位置
 camera.position.set(0, 0, 10);
 scene.add(camera);
 
+const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20);
+const material = new THREE.MeshStandardMaterial();
+const sphere = new THREE.Mesh(sphereGeometry, material);
+// 投射阴影
+sphere.castShadow = true;
+scene.add(sphere)
 
-function createPoint(url, size = 0.5) {
-  const particlesGeometry = new THREE.BufferGeometry();
-  const count = 5000;
+// 创建平面
+const planeGeometry = new THREE.PlaneBufferGeometry(50, 50);
+const plane = new THREE.Mesh(planeGeometry, material);
+plane.position.set(0, -1, 0);
+plane.rotation.x = -Math.PI / 2;
+plane.receiveShadow = true;
+scene.add(plane);
+// 灯光
+// 环境光
+const light = new THREE.AmbientLight(0xffffff, .5); // soft white light
+scene.add(light);
 
-  // 设置缓冲区数组
-  const positions = new Float32Array(count * 3);
-  // 设置粒子顶点颜色
-  const colors = new Float32Array(count * 3);
-  // 设置顶点
-  for (let i = 0; i < count * 3; i++) {
-    positions[i] = (Math.random() - 0.5) * 100;
-    colors[i] = Math.random();
-  }
-  particlesGeometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(positions, 3)
-  );
-  particlesGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+const smallBall = new THREE.Mesh(
+  new THREE.SphereBufferGeometry(0.1, 20, 20),
+  new THREE.MeshBasicMaterial({ color: 0xff0000 })
+);
 
-  // 设置点材质
-  const pointsMaterial = new THREE.PointsMaterial();
-  pointsMaterial.size = size;
-  pointsMaterial.color.set(0xfff000);
-  // 相机深度而衰减
-  pointsMaterial.sizeAttenuation = true;
+smallBall.position.set(20, 2, 2)
 
-  // 载入纹理
-  const textureLoader = new THREE.TextureLoader();
 
-  const texture = textureLoader.load(url);
-  // 设置点材质纹理
-  pointsMaterial.map = texture;
-  pointsMaterial.alphaMap = texture;
-  pointsMaterial.transparent = true;
-  pointsMaterial.depthWrite = false;
-  pointsMaterial.blending = THREE.AdditiveBlending;
-  // 设置启动顶点颜色
-  pointsMaterial.vertexColors = true;
+//直线光源
+const pointLight = new THREE.PointLight(0xff0000, 1);
+pointLight.position.set(10, 10, 10);
+pointLight.castShadow = true;
+// 设置模糊度
+pointLight.shadow.radius = 20
+// 设置阴影贴图的分辨率
+pointLight.shadow.mapSize.set(512, 512)
+pointLight.decay = 0
 
-  const points = new THREE.Points(particlesGeometry, pointsMaterial);
-
-  scene.add(points);
-  return points
-}
-
-const url1 = require('./assets/textures/particles/11.png')
-const url2 = require('./assets/textures/particles/3.png')
-const url3 = require('./assets/textures/particles/4.png')
-const point1 = createPoint(url1, 1.5)
-const point2 = createPoint(url2, 1.5)
-const point3 = createPoint(url3, 1.5)
-
+// 设置透视相机的属性
+smallBall.add(pointLight);
+scene.add(smallBall)
 // 初始化渲染器
 const renderer = new THREE.WebGLRenderer();
 // 设置渲染的尺寸大小
@@ -103,12 +90,8 @@ controls.enableDamping = true;
 const axesHelper = new THREE.AxesHelper(5)
 scene.add(axesHelper);
 
-const clock = new THREE.Clock();
 function render() {
-  let time = clock.getElapsedTime();
-  point1.rotation.x = time * 0.3;
-  point2.rotation.x = time * 0.3;
-  point3.rotation.x = time * 0.3;
+  
   controls.update();
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数
