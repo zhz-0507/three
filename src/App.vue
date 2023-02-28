@@ -1,5 +1,18 @@
 <template>
-  <div></div>
+  <div>
+    <div class="page page0">
+      <h1>老陈打码-Ray投射光线</h1>
+      <h3>THREE.Raycaster实现3d交互效果</h3>
+    </div>
+    <div class="page page1">
+      <h1>THREE.BufferGeometry！</h1>
+      <h3>应用打造酷炫的三角形</h3>
+    </div>
+    <div class="page page2">
+      <h1>活泼点光源</h1>
+      <h3>点光源围绕照亮小球</h3>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -10,79 +23,121 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
-// 目标：运用数学知识设计特定形状的星系
 
+// 目标：raycaster
+
+// const gui = new dat.GUI();
 // 1、创建场景
 const scene = new THREE.Scene();
-const gui = new dat.GUI();
+
 // 2、创建相机
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
-  30
+  300
 );
 
+const textureLoader = new THREE.TextureLoader();
 // 设置相机位置
-camera.position.set(0, 0, 10);
+camera.position.set(0, 0, 18);
 scene.add(camera);
 
-// ******三维空间中计算出鼠标移过了什么物体*******
-// 步骤1：先渲染1000个立方体
-// 步骤2：设置材质
-// 步骤3：创建光线对象
-// 步骤4：创建鼠标位置对象
-// 步骤5：创建监听对象
-// 通过setFromCamera方法去更新射线
-
-
-
-
-const cubeGeometry = new THREE.BoxGeometry(1,1,1)
+const cubeGeometry = new THREE.BoxBufferGeometry(2, 2, 2);
 const material = new THREE.MeshBasicMaterial({
-  wireframe: true
-})
-const redMaterial  = new THREE.MeshBasicMaterial({
-  color: '#ff0000'
-})
+  wireframe: true,
+});
+const redMaterial = new THREE.MeshBasicMaterial({
+  color: "#ff0000",
+});
 
-for(let i=-5;i<5;i++) {
-  for(let j=-5;j<5;j++) {
-    for(let k=-5;k<5;k++){
-      const cube = new THREE.Mesh(cubeGeometry,material)
-      cube.position.set(i,j,k)
-      scene.add(cube)
+// 1000立方体
+let cubeArr = [];
+let cubeGroup = new THREE.Group();
+for (let i = 0; i < 5; i++) {
+  for (let j = 0; j < 5; j++) {
+    for (let z = 0; z < 5; z++) {
+      const cube = new THREE.Mesh(cubeGeometry, material);
+      cube.position.set(i * 2 - 4, j * 2 - 4, z * 2 - 4);
+      cubeGroup.add(cube);
+      cubeArr.push(cube);
     }
   }
 }
 
-// 创建投影光线对象
-const raycaster = new THREE.Raycaster();
-// 鼠标的位置对象
-const pointer = new THREE.Vector2();
-function onMousemove(event) {
-  pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-	pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+scene.add(cubeGroup);
 
-  // 通过摄像机和鼠标位置更新射线
-  raycaster.setFromCamera(pointer, camera)
-  // 计算物体和射线的焦点
-  const children = scene.children
-  let result = raycaster.intersectObjects(children)
-  result.forEach((item) => {
-    item.object.material = redMaterial
-  })
+// 创建三角形酷炫物体
+// 添加物体
+// 创建几何体
+var sjxGroup = new THREE.Group();
+for (let i = 0; i < 50; i++) {
+  // 每一个三角形，需要3个顶点，每个顶点需要3个值
+  const geometry = new THREE.BufferGeometry();
+  const positionArray = new Float32Array(9);
+  for (let j = 0; j < 9; j++) {
+    if (j % 3 == 1) {
+      positionArray[j] = Math.random() * 10 - 5;
+    } else {
+      positionArray[j] = Math.random() * 10 - 5;
+    }
+  }
+  geometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(positionArray, 3)
+  );
+  let color = new THREE.Color(Math.random(), Math.random(), Math.random());
+  const material = new THREE.MeshBasicMaterial({
+    color: color,
+    transparent: true,
+    opacity: 0.5,
+    side: THREE.DoubleSide,
+  });
+  // 根据几何体和材质创建物体
+  let sjxMesh = new THREE.Mesh(geometry, material);
+  //   console.log(mesh);
+  sjxGroup.add(sjxMesh);
 }
+sjxGroup.position.set(0, -30, 0);
+scene.add(sjxGroup);
 
-window.addEventListener( 'mousemove', onMousemove );
+
+
+
+
+
+// 创建投射光线对象
+const raycaster = new THREE.Raycaster();
+
+// 鼠标的位置对象
+const mouse = new THREE.Vector2();
+
+// 监听鼠标的位置
+window.addEventListener("mousemove", (event) => {
+  mouse.x = event.clientX / window.innerWidth - 0.5;
+  mouse.y = event.clientY / window.innerHeight - 0.5;
+});
+
+// 监听鼠标的位置
+window.addEventListener("click", (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -((event.clientY / window.innerHeight) * 2 - 1);
+  raycaster.setFromCamera(mouse, camera);
+  let result = raycaster.intersectObjects(cubeArr);
+  result.forEach((item) => {
+    item.object.material = redMaterial;
+  });
+});
 
 // 初始化渲染器
-const renderer = new THREE.WebGLRenderer();
+// 渲染器透明
+const renderer = new THREE.WebGLRenderer({ alpha: true });
 // 设置渲染的尺寸大小
 renderer.setSize(window.innerWidth, window.innerHeight);
 // 开启场景中的阴影贴图
-renderer.shadowMap.enabled = true
+renderer.shadowMap.enabled = true;
+renderer.physicallyCorrectLights = true;
+
 // console.log(renderer);
 // 将webgl渲染的canvas内容添加到body
 document.body.appendChild(renderer.domElement);
@@ -91,18 +146,28 @@ document.body.appendChild(renderer.domElement);
 // renderer.render(scene, camera);
 
 // 创建轨道控制器
-const controls = new OrbitControls(camera, renderer.domElement);
-// 设置控制器阻尼，让控制器更有真实效果,必须在动画循环里调用.update()。
-controls.enableDamping = true;
+// const controls = new OrbitControls(camera, renderer.domElement);
+// // 设置控制器阻尼，让控制器更有真实效果,必须在动画循环里调用.update()。
+// controls.enableDamping = true;
 
 // 添加坐标轴辅助器
-const axesHelper = new THREE.AxesHelper(5)
+const axesHelper = new THREE.AxesHelper(5);
 scene.add(axesHelper);
-
+// 设置时钟
 const clock = new THREE.Clock();
+
+
 function render() {
   let time = clock.getElapsedTime();
-  controls.update();
+  // let deltaTime = clock.getDelta();
+
+  cubeGroup.rotation.x = time * 0.5;
+  cubeGroup.rotation.y = time * 0.5;
+  //   根据当前滚动的scrolly，去设置相机移动的位置
+  camera.position.y = -(window.scrollY / window.innerHeight) * 30;
+  sjxGroup.rotation.x = time * 0.4;
+  sjxGroup.rotation.z = time * 0.3;
+  //   controls.update();
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数
   requestAnimationFrame(render);
@@ -110,9 +175,17 @@ function render() {
 
 render();
 
+
+// 监听鼠标的位置
+window.addEventListener("mousemove", (event) => {
+  mouse.x = event.clientX / window.innerWidth - 0.5;
+  mouse.y = event.clientY / window.innerHeight - 0.5;
+});
+
 // 监听画面变化，更新渲染画面
 window.addEventListener("resize", () => {
   //   console.log("画面变化了");
+
   // 更新摄像头
   camera.aspect = window.innerWidth / window.innerHeight;
   //   更新摄像机的投影矩阵
@@ -124,22 +197,55 @@ window.addEventListener("resize", () => {
   renderer.setPixelRatio(window.devicePixelRatio);
 });
 
+// 设置当前页
+let currentPage = 0;
+// 监听滚动事件
+window.addEventListener("scroll", () => {
+  const newPage = Math.round(window.scrollY / window.innerHeight);
+  if (newPage != currentPage) {
+    currentPage = newPage;
+    console.log("改变页面，当前是：" + currentPage);
+    
+
+  }
+});
 
 
 
 </script>
 
 <style>
-*{
+* {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
-canvas{
-  width: 100vw;
-  height: 100vh;
+body {
+  background-color: rgb(36, 58, 66);
+}
+canvas {
   position: fixed;
-  top: 0;
   left: 0;
+  top: 0;
 }
+.page {
+  height: 100vh;
+  display: flex;
+  color: #fff;
+  flex-direction: column;
+  /* justify-content: center; */
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+.page h1 {
+  margin: 60px;
+  font-size: 40px;
+}
+
+.page h3 {
+  font-size: 30px;
+}
+/* ::-webkit-scrollbar {
+  display: none;
+} */
 </style>
