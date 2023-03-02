@@ -1,17 +1,6 @@
 <template>
   <div>
-    <div class="page page0">
-      <h1>老陈打码-Ray投射光线</h1>
-      <h3>THREE.Raycaster实现3d交互效果</h3>
-    </div>
-    <div class="page page1">
-      <h1>THREE.BufferGeometry！</h1>
-      <h3>应用打造酷炫的三角形</h3>
-    </div>
-    <div class="page page2">
-      <h1>活泼点光源</h1>
-      <h3>点光源围绕照亮小球</h3>
-    </div>
+  
   </div>
 </template>
 
@@ -23,8 +12,11 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
+// 导入connon引擎
+import * as CANNON from "cannon-es";
 
-// 目标：raycaster
+// 目标：设置cube跟着旋转
+console.log(CANNON);
 
 // const gui = new dat.GUI();
 // 1、创建场景
@@ -38,96 +30,118 @@ const camera = new THREE.PerspectiveCamera(
   300
 );
 
-const textureLoader = new THREE.TextureLoader();
 // 设置相机位置
 camera.position.set(0, 0, 18);
 scene.add(camera);
 
-const cubeGeometry = new THREE.BoxBufferGeometry(2, 2, 2);
-const material = new THREE.MeshBasicMaterial({
-  wireframe: true,
-});
-const redMaterial = new THREE.MeshBasicMaterial({
-  color: "#ff0000",
-});
+const cubeArr = [];
+//设置物体材质
+const cubeWorldMaterial = new CANNON.Material("cube");
 
-// 1000立方体
-let cubeArr = [];
-let cubeGroup = new THREE.Group();
-for (let i = 0; i < 5; i++) {
-  for (let j = 0; j < 5; j++) {
-    for (let z = 0; z < 5; z++) {
-      const cube = new THREE.Mesh(cubeGeometry, material);
-      cube.position.set(i * 2 - 4, j * 2 - 4, z * 2 - 4);
-      cubeGroup.add(cube);
-      cubeArr.push(cube);
-    }
-  }
-}
+function createCube() {
+  // 创建立方体和平面
+  const cubeGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+  const cubeMaterial = new THREE.MeshStandardMaterial();
+  const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  cube.castShadow = true;
+  scene.add(cube);
+  // 创建物理cube形状
+  const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
 
-scene.add(cubeGroup);
-
-// 创建三角形酷炫物体
-// 添加物体
-// 创建几何体
-var sjxGroup = new THREE.Group();
-for (let i = 0; i < 50; i++) {
-  // 每一个三角形，需要3个顶点，每个顶点需要3个值
-  const geometry = new THREE.BufferGeometry();
-  const positionArray = new Float32Array(9);
-  for (let j = 0; j < 9; j++) {
-    if (j % 3 == 1) {
-      positionArray[j] = Math.random() * 10 - 5;
-    } else {
-      positionArray[j] = Math.random() * 10 - 5;
-    }
-  }
-  geometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(positionArray, 3)
+  // 创建物理世界的物体
+  const cubeBody = new CANNON.Body({
+    shape: cubeShape,
+    position: new CANNON.Vec3(0, 0, 0),
+    //   小球质量
+    mass: 1,
+    //   物体材质
+    material: cubeWorldMaterial,
+  });
+  cubeBody.applyLocalForce(
+    new CANNON.Vec3(300, 0, 0), //添加的力的大小和方向
+    new CANNON.Vec3(0, 0, 0) //施加的力所在的位置
   );
-  let color = new THREE.Color(Math.random(), Math.random(), Math.random());
-  const material = new THREE.MeshBasicMaterial({
-    color: color,
-    transparent: true,
-    opacity: 0.5,
-    side: THREE.DoubleSide,
+
+  // 将物体添加至物理世界
+  world.addBody(cubeBody);
+  // 添加监听碰撞事件
+  // function HitEvent(e) {
+  //   // 获取碰撞的强度
+  //   //   console.log("hit", e);
+  //   const impactStrength = e.contact.getImpactVelocityAlongNormal();
+  //   console.log(impactStrength);
+  //   if (impactStrength > 2) {
+  //     //   重新从零开始播放
+  //     hitSound.currentTime = 0;
+  //     hitSound.volume = impactStrength / 12;
+  //     hitSound.play();
+  //   }
+  // }
+  // cubeBody.addEventListener("collide", HitEvent);
+  cubeArr.push({
+    mesh: cube,
+    body: cubeBody,
   });
-  // 根据几何体和材质创建物体
-  let sjxMesh = new THREE.Mesh(geometry, material);
-  //   console.log(mesh);
-  sjxGroup.add(sjxMesh);
 }
-sjxGroup.position.set(0, -30, 0);
-scene.add(sjxGroup);
 
+window.addEventListener("click", createCube);
 
+const floor = new THREE.Mesh(
+  new THREE.PlaneBufferGeometry(20, 20),
+  new THREE.MeshStandardMaterial()
+);
 
+floor.position.set(0, -5, 0);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
 
+// 创建物理世界
+// const world = new CANNON.World({ gravity: 9.8 });
+const world = new CANNON.World();
+world.gravity.set(0, -9.8, 0);
 
+// 创建击打声音
+// const hitSound = new Audio("assets/metalHit.mp3");
 
-// 创建投射光线对象
-const raycaster = new THREE.Raycaster();
+// 物理世界创建地面
+const floorShape = new CANNON.Plane();
+const floorBody = new CANNON.Body();
+const floorMaterial = new CANNON.Material("floor");
+floorBody.material = floorMaterial;
+// 当质量为0的时候，可以使得物体保持不动
+floorBody.mass = 0;
+floorBody.addShape(floorShape);
+// 地面位置
+floorBody.position.set(0, -5, 0);
+// 旋转地面的位置
+floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+world.addBody(floorBody);
 
-// 鼠标的位置对象
-const mouse = new THREE.Vector2();
+// 设置2种材质碰撞的参数
+const defaultContactMaterial = new CANNON.ContactMaterial(
+  cubeWorldMaterial,
+  floorMaterial,
+  {
+    //   摩擦力
+    friction: 0.1,
+    // 弹性
+    restitution: 0.7,
+  }
+);
 
-// 监听鼠标的位置
-window.addEventListener("mousemove", (event) => {
-  mouse.x = event.clientX / window.innerWidth - 0.5;
-  mouse.y = event.clientY / window.innerHeight - 0.5;
-});
+// 讲材料的关联设置添加的物理世界
+world.addContactMaterial(defaultContactMaterial);
 
-// 监听鼠标的位置
-window.addEventListener("click", (event) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -((event.clientY / window.innerHeight) * 2 - 1);
-  raycaster.setFromCamera(mouse, camera);
-  let result = raycaster.intersectObjects(cubeArr);
-  result.forEach((item) => {
-    item.object.material = redMaterial;
-  });
-});
+// 设置世界碰撞的默认材料，如果材料没有设置，都用这个
+world.defaultContactMaterial = defaultContactMaterial;
+
+//添加环境光和平行光
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+dirLight.castShadow = true;
+scene.add(dirLight);
 
 // 初始化渲染器
 // 渲染器透明
@@ -136,7 +150,6 @@ const renderer = new THREE.WebGLRenderer({ alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 // 开启场景中的阴影贴图
 renderer.shadowMap.enabled = true;
-renderer.physicallyCorrectLights = true;
 
 // console.log(renderer);
 // 将webgl渲染的canvas内容添加到body
@@ -146,9 +159,9 @@ document.body.appendChild(renderer.domElement);
 // renderer.render(scene, camera);
 
 // 创建轨道控制器
-// const controls = new OrbitControls(camera, renderer.domElement);
-// // 设置控制器阻尼，让控制器更有真实效果,必须在动画循环里调用.update()。
-// controls.enableDamping = true;
+const controls = new OrbitControls(camera, renderer.domElement);
+// 设置控制器阻尼，让控制器更有真实效果,必须在动画循环里调用.update()。
+controls.enableDamping = true;
 
 // 添加坐标轴辅助器
 const axesHelper = new THREE.AxesHelper(5);
@@ -156,31 +169,25 @@ scene.add(axesHelper);
 // 设置时钟
 const clock = new THREE.Clock();
 
-
 function render() {
-  let time = clock.getElapsedTime();
-  // let deltaTime = clock.getDelta();
+  //   let time = clock.getElapsedTime();
+  let deltaTime = clock.getDelta();
+  // 更新物理引擎里世界的物体
+  world.step(1 / 120, deltaTime);
 
-  cubeGroup.rotation.x = time * 0.5;
-  cubeGroup.rotation.y = time * 0.5;
-  //   根据当前滚动的scrolly，去设置相机移动的位置
-  camera.position.y = -(window.scrollY / window.innerHeight) * 30;
-  sjxGroup.rotation.x = time * 0.4;
-  sjxGroup.rotation.z = time * 0.3;
-  //   controls.update();
+  //   cube.position.copy(cubeBody.position);
+  cubeArr.forEach((item) => {
+    item.mesh.position.copy(item.body.position);
+    // 设置渲染的物体跟随物理的物体旋转
+    item.mesh.quaternion.copy(item.body.quaternion);
+  });
+
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数
   requestAnimationFrame(render);
 }
 
 render();
-
-
-// 监听鼠标的位置
-window.addEventListener("mousemove", (event) => {
-  mouse.x = event.clientX / window.innerWidth - 0.5;
-  mouse.y = event.clientY / window.innerHeight - 0.5;
-});
 
 // 监听画面变化，更新渲染画面
 window.addEventListener("resize", () => {
@@ -196,20 +203,6 @@ window.addEventListener("resize", () => {
   //   设置渲染器的像素比
   renderer.setPixelRatio(window.devicePixelRatio);
 });
-
-// 设置当前页
-let currentPage = 0;
-// 监听滚动事件
-window.addEventListener("scroll", () => {
-  const newPage = Math.round(window.scrollY / window.innerHeight);
-  if (newPage != currentPage) {
-    currentPage = newPage;
-    console.log("改变页面，当前是：" + currentPage);
-    
-
-  }
-});
-
 
 
 </script>
@@ -249,3 +242,6 @@ canvas {
   display: none;
 } */
 </style>
+
+
+
